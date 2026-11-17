@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tesla Callback</title>
+<style>
+  *{box-sizing:border-box}
+  body{font:16px/1.65 -apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;background:#f4f4f6;color:#111}
+  h1{font-size:19px;margin:0 0 4px}
+  .sub{color:#666;font-size:13px;margin-bottom:18px}
+  .card{background:#fff;border:1px solid #e2e2e6;border-radius:10px;padding:16px;margin-bottom:14px}
+  .k{font-size:12px;color:#888;letter-spacing:.04em;text-transform:uppercase;margin-bottom:6px}
+  .v{word-break:break-all;font:13px/1.6 ui-monospace,Consolas,monospace;background:#fafafa;border:1px solid #eee;border-radius:8px;padding:10px}
+  button{background:#e8453c;color:#fff;border:0;border-radius:8px;padding:12px 18px;font-size:15px;width:100%;margin-top:10px}
+  button:active{opacity:.8}
+  .err{color:#b3261e;font-weight:600}
+  .ok{color:#1a7f37;font-weight:600}
+  .hint{font-size:13px;color:#666;margin-top:12px;line-height:1.7}
+</style>
+</head>
+<body>
+<h1>Tesla 授权回调</h1>
+<div class="sub">把下面的 code 复制回电脑端即可</div>
+<div id="box"><div class="card">读取中…</div></div>
+
+<script>
+(function () {
+  var raw = location.search.replace(/^\?/, '');
+  if (location.hash) raw += '&' + location.hash.replace(/^#/, '');
+  var p = {};
+  raw.split('&').forEach(function (kv) {
+    if (!kv) return;
+    var i = kv.indexOf('=');
+    if (i < 0) return;
+    try {
+      p[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' '));
+    } catch (e) {}
+  });
+
+  var box = document.getElementById('box');
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  if (p.error) {
+    box.innerHTML = '<div class="card"><div class="k">错误</div><div class="v err">' +
+      esc(p.error) + (p.error_description ? ' — ' + esc(p.error_description) : '') + '</div></div>';
+    return;
+  }
+
+  if (!p.code) {
+    box.innerHTML = '<div class="card"><div class="k">未发现 code</div>' +
+      '<div class="v">URL 里没有 code 参数。请确认是从特斯拉授权页跳转过来的。</div>' +
+      '<div class="hint">当前地址：<br>' + esc(location.href.slice(0, 600)) + '</div></div>';
+    return;
+  }
+
+  box.innerHTML =
+    '<div class="card"><div class="k">Authorization Code</div>' +
+    '<div class="v" id="code">' + esc(p.code) + '</div>' +
+    '<button id="bc">复制 code</button></div>' +
+    '<div class="card"><div class="k">State</div><div class="v" id="st">' + esc(p.state || '(无)') + '</div></div>' +
+    '<div class="hint">本页只做展示，不会上传或保存任何内容。</div>';
+
+  document.getElementById('bc').onclick = function () {
+    var btn = this, t = p.code;
+    function done() { btn.textContent = '已复制 ✓'; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(done, function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = '请长按手动复制'; }
+      ta.remove();
+    }
+  };
+})();
+</script>
+</body>
+</html>
